@@ -36,7 +36,7 @@ textarea{width:100%;min-height:70px}.cards{display:grid;grid-template-columns:re
 </style>
 </head>
 <body>
-<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.3a・老師答案卷版</small></header>
+<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.3b・白先／提子修正版</small></header>
 <main>
 <section class="panel">
 <h2>① 建立題目</h2>
@@ -76,10 +76,16 @@ function buildSvg(target,n,ss,ans=[]){
  let cg=el("g");ss.forEach(s=>cg.appendChild(el("circle",{cx:p+s.x*step,cy:p+s.y*step,r:step*.43,fill:s.c==="B"?"#111":"#fff",stroke:"#111","stroke-width":"2"})));target.appendChild(cg);
  if(ans&&ans.length){let ag=el("g");ans.forEach((a,i)=>{let fill=a.c==="B"?"#111":"#fff",txt=a.c==="B"?"#fff":"#111";ag.appendChild(el("circle",{cx:p+a.x*step,cy:p+a.y*step,r:step*.43,fill,stroke:"#b22","stroke-width":"4"}));let t=el("text",{x:p+a.x*step,y:p+a.y*step+step*.13,"text-anchor":"middle","font-size":step*.42,"font-weight":"700",fill:txt});t.textContent=String(i+1);ag.appendChild(t)});target.appendChild(ag)}
 }
-function draw(){buildSvg(svg,N,stones,answers);$("#answerStatus").textContent=mode==="A"?`🔑 設定答案中：已輸入 ${answers.length} 手（依序點正解）`:`目前：建立題目棋形${answers.length?`｜已有答案 ${answers.length} 手`:""}`;}
+function key(x,y){return x+","+y}
+function neighbors(x,y){return [[x-1,y],[x+1,y],[x,y-1],[x,y+1]].filter(([a,b])=>a>=0&&b>=0&&a<N&&b<N)}
+function groupAt(board,x,y){const m=new Map(board.map(s=>[key(s.x,s.y),s])),root=m.get(key(x,y));if(!root)return {group:[],libs:new Set()};let stack=[root],seen=new Set([key(x,y)]),group=[],libs=new Set();while(stack.length){let q=stack.pop();group.push(q);for(let [a,b] of neighbors(q.x,q.y)){let z=m.get(key(a,b));if(!z)libs.add(key(a,b));else if(z.c===root.c&&!seen.has(key(a,b))){seen.add(key(a,b));stack.push(z)}}}return {group,libs}}
+function playMove(board,mv){let b=board.map(s=>({...s}));if(b.some(s=>s.x===mv.x&&s.y===mv.y))return null;b.push({x:mv.x,y:mv.y,c:mv.c});let enemy=mv.c==="B"?"W":"B";for(let [a,b2] of neighbors(mv.x,mv.y)){let q=b.find(s=>s.x===a&&s.y===b2&&s.c===enemy);if(q){let g=groupAt(b,a,b2);if(g.libs.size===0){let dead=new Set(g.group.map(s=>key(s.x,s.y)));b=b.filter(s=>!dead.has(key(s.x,s.y)))}}}let mine=groupAt(b,mv.x,mv.y);if(mine.libs.size===0)return null;return b}
+function answerPosition(){let b=stones.map(s=>({...s}));for(let a of answers){let nb=playMove(b,a);if(!nb)break;b=nb}return b}
+function draw(){let shown=mode==="A"?answerPosition():stones;buildSvg(svg,N,shown,mode==="A"?answers:[]);$("#answerStatus").textContent=mode==="A"?`🔑 設定答案中：${$("#first").value}・已輸入 ${answers.length} 手（支援自動提子）`:`目前：建立題目棋形${answers.length?`｜已有答案 ${answers.length} 手`:""}`;}
 $("#size").onchange=e=>{N=+e.target.value;stones=[];answers=[];history=[];draw()}
+$("#first").onchange=()=>{if(answers.length){if(confirm("更改先手會清除目前答案手順，確定嗎？")){answers=[];history=[]}else{$("#first").value=$("#first").value==="黑先"?"白先":"黑先"}}draw()}
 ;["black","white","erase"].forEach(id=>$("#"+id).onclick=()=>{mode=id==="black"?"B":id==="white"?"W":"E";["black","white","erase","answer"].forEach(x=>$("#"+x).classList.toggle("active",x===id));draw()});$("#answer").onclick=()=>{mode="A";["black","white","erase","answer"].forEach(x=>$("#"+x).classList.toggle("active",x==="answer"));draw()}
-svg.addEventListener("pointerdown",e=>{let r=svg.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*1000,vy=(e.clientY-r.top)/r.height*1000,p=65,step=870/(N-1),x=Math.round((vx-p)/step),y=Math.round((vy-p)/step);if(x<0||y<0||x>=N||y>=N)return;history.push(JSON.stringify({stones,answers}));let k=stones.findIndex(s=>s.x===x&&s.y===y);if(mode==="A"){if(k>=0||answers.some(a=>a.x===x&&a.y===y))return history.pop();let start=$("#first").value==="黑先"?"B":"W",c=(answers.length%2===0)?start:(start==="B"?"W":"B");answers.push({x,y,c});}else if(mode==="E"){if(k>=0)stones.splice(k,1)}else if(k<0)stones.push({x,y,c:mode});else stones[k].c=mode;draw()})
+svg.addEventListener("pointerdown",e=>{let r=svg.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*1000,vy=(e.clientY-r.top)/r.height*1000,p=65,step=870/(N-1),x=Math.round((vx-p)/step),y=Math.round((vy-p)/step);if(x<0||y<0||x>=N||y>=N)return;history.push(JSON.stringify({stones,answers}));let k=stones.findIndex(s=>s.x===x&&s.y===y);if(mode==="A"){let start=$("#first").value==="黑先"?"B":"W",c=(answers.length%2===0)?start:(start==="B"?"W":"B"),cur=answerPosition();if(cur.some(s=>s.x===x&&s.y===y)){history.pop();return}let nb=playMove(cur,{x,y,c});if(!nb){history.pop();alert("這一手不能下（落在已有棋子或形成自殺棋）。");return}answers.push({x,y,c});}else if(mode==="E"){if(k>=0)stones.splice(k,1)}else if(k<0)stones.push({x,y,c:mode});else stones[k].c=mode;draw()})
 $("#undo").onclick=()=>{if(history.length){let h=JSON.parse(history.pop());if(Array.isArray(h)){stones=h}else{stones=h.stones||[];answers=h.answers||[]}draw()}}
 $("#clear").onclick=()=>{if(!stones.length||confirm("確定清空目前棋盤？")){history.push(JSON.stringify({stones,answers}));stones=[];answers=[];draw()}}
 function reset(){stones=[];answers=[];history=[];mode="B";$("#note").value="";["black","white","erase","answer"].forEach(x=>$("#"+x).classList.toggle("active",x==="black"));draw()} $("#new").onclick=reset;$("#clearAnswer").onclick=()=>{answers=[];draw()}
