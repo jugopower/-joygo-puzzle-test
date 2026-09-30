@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Joy Go 圍棋題庫 Beta 0.2b</title>
+<title>Joy Go 圍棋題庫 Beta 0.2c</title>
 <style>
 :root{--bg:#f4efe6;--panel:#fffdf8;--ink:#29251f;--brown:#765536;--line:#d9cbb8}
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",Arial,sans-serif;background:var(--bg);color:var(--ink)}
@@ -36,7 +36,7 @@ textarea{width:100%;min-height:70px}.cards{display:grid;grid-template-columns:re
 </style>
 </head>
 <body>
-<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.2b・學生測驗卷分享版</small></header>
+<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.2c・學生測驗卷分享版</small></header>
 <main>
 <section class="panel">
 <h2>① 建立題目</h2>
@@ -56,7 +56,7 @@ textarea{width:100%;min-height:70px}.cards{display:grid;grid-template-columns:re
 <h2>② 我的題庫 <span id="count" class="badge">0 題</span> <span id="selectedCount" class="badge">已選 0 題</span></h2>
 <div class="hint">勾選題目後，可測試 A4 4／6／10 題排版。</div>
 <div id="cards" class="cards"></div>
-<div class="printbar"><button onclick="doPrint(4)">🖨️ 4 題版</button><button onclick="doPrint(6)" class="primary">🖨️ 6 題版</button><button onclick="doPrint(10)">🖨️ 10 題版</button><button id="all">全選</button><button id="none">取消全選</button><button id="share">↗ 分享測驗卷到 LINE</button></div>
+<div class="printbar"><button onclick="doPrint(4)">🖨️ 4 題版</button><button onclick="doPrint(6)" class="primary">🖨️ 6 題版</button><button onclick="doPrint(10)">🖨️ 10 題版</button><button id="all">全選</button><button id="none">取消全選</button><button id="share">↗ 分享測驗卷檔案到 LINE</button></div>
 </section>
 </main><dialog id="previewDlg"><div class="previewTop"><strong id="previewTitle">題目預覽</strong><button id="closePreview">✕ 關閉</button></div><svg id="previewBoard" viewBox="0 0 1000 1000"></svg><div id="previewMeta" class="hint"></div><div class="previewNav"><button id="prevPreview">← 上一題</button><button id="togglePreview" class="primary">勾選此題</button><button id="nextPreview">下一題 →</button></div></dialog>
 <section id="printArea"></section>
@@ -90,71 +90,23 @@ let previewIndex=0;
 function openPreview(i){previewIndex=i;refreshPreview();$("#previewDlg").showModal()}
 function refreshPreview(){if(!puzzles.length)return;let p=puzzles[previewIndex];buildSvg($("#previewBoard"),p.size,p.stones);$("#previewTitle").textContent=`第 ${String(previewIndex+1).padStart(3,"0")} 題`;$("#previewMeta").textContent=`${p.category}｜${p.first}｜${p.size} 路｜${p.level}${p.note?"｜"+p.note:""}`;let q=document.querySelector(`.pick[data-id="${p.id}"]`);$("#togglePreview").textContent=q&&q.checked?"取消勾選":"勾選此題"}
 $("#closePreview").onclick=()=>$("#previewDlg").close();$("#prevPreview").onclick=()=>{previewIndex=(previewIndex-1+puzzles.length)%puzzles.length;refreshPreview()};$("#nextPreview").onclick=()=>{previewIndex=(previewIndex+1)%puzzles.length;refreshPreview()};$("#togglePreview").onclick=()=>{let p=puzzles[previewIndex],q=document.querySelector(`.pick[data-id="${p.id}"]`);if(q){q.checked=!q.checked;updateSelected();refreshPreview()}};
-$("#all").onclick=()=>{document.querySelectorAll(".pick").forEach(x=>x.checked=true);updateSelected()};$("#none").onclick=()=>{document.querySelectorAll(".pick").forEach(x=>x.checked=false);updateSelected()};$("#share").onclick=async()=>{
+$("#all").onclick=()=>{document.querySelectorAll(".pick").forEach(x=>x.checked=true);updateSelected()};$("#none").onclick=()=>{document.querySelectorAll(".pick").forEach(x=>x.checked=false);updateSelected()};$("#share").onclick=()=>{
  let ids=[...document.querySelectorAll(".pick:checked")].map(x=>+x.dataset.id);
  let chosen=puzzles.filter(p=>ids.includes(p.id));
  if(!chosen.length)return alert("請先勾選要分享的題目。");
  if(chosen.length>10)return alert("測驗卷一次最多分享 10 題。");
-
- // Beta 0.2b：先把測驗卷存成精簡資料，只保留學生作答需要的內容。
- let sheet=chosen.map(p=>({s:p.size,f:p.first,c:p.category,l:p.level,t:p.stones.map(q=>[q.x,q.y,q.c])}));
- let json=JSON.stringify(sheet);
- let token=btoa(unescape(encodeURIComponent(json))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
- let url=location.origin+location.pathname+"?w="+encodeURIComponent(token);
- let msg=`Joy Go 圍棋測驗卷｜${chosen.length} 題\n朱老師分享了一份圍棋練習題，點開連結即可練習。`;
-
- if(navigator.share){
-   try{await navigator.share({title:`Joy Go 圍棋測驗卷｜${chosen.length} 題`,text:msg,url});return}catch(e){}
- }
- prompt("請複製下面內容傳到 LINE：",msg+"\n"+url);
-}
+ let n=chosen.length<=4?4:chosen.length<=6?6:10;
+ let w=window.open("","_blank");
+ if(!w)return alert("Safari 阻擋了測驗卷視窗，請允許彈出式視窗後再試一次。");
+ w.document.write(`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Joy Go 圍棋測驗卷</title><style>
+ @page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"PingFang TC",Arial,sans-serif;color:#29251f;margin:0}.actions{padding:12px;background:#f4efe6;text-align:center}.actions button{font:inherit;padding:10px 16px;border:0;border-radius:9px;background:#765536;color:#fff;font-weight:700}.sheet{max-width:194mm;margin:auto}.title{text-align:center;font-size:16pt;font-weight:700}.sub{display:flex;justify-content:space-between;font-size:9pt;margin:2mm 0 3mm}.grid{display:grid;grid-template-columns:1fr 1fr;gap:3mm 5mm}.puzzle{break-inside:avoid}.phead{font-size:9pt;font-weight:700;margin-bottom:1mm}.psvg{width:100%;display:block}.n4 .psvg{height:82mm}.n6 .psvg{height:54mm}.n10{gap:1.5mm 5mm}.n10 .psvg{height:30mm}@media print{.actions{display:none}}
+ </style></head><body><div class="actions"><button onclick="window.print()">🖨️ 產生 PDF／列印</button><div>iPad：進入列印預覽後，用「分享」傳到 LINE。</div></div><div class="sheet"><div class="title">Joy Go 圍棋測驗卷</div><div class="sub"><span>${chosen.length} 題練習</span><span>姓名：____________　日期：____________</span></div><div id="grid" class="grid n${n}"></div></div></body></html>`);
+ w.document.close();
+ let grid=w.document.getElementById("grid");
+ chosen.forEach((p,i)=>{let d=w.document.createElement("div");d.className="puzzle";d.innerHTML=`<div class="phead">第 ${i+1} 題　${esc(p.first)}　${esc(p.category)}</div><svg class="psvg" viewBox="0 0 1000 1000"></svg>`;grid.appendChild(d);buildSvg(d.querySelector("svg"),p.size,p.stones)});
+};
 window.doPrint=num=>{let ids=[...document.querySelectorAll(".pick:checked")].map(x=>+x.dataset.id),ch=puzzles.filter(p=>ids.includes(p.id)).slice(0,num);if(!ch.length)return alert("請先勾選題目。");let a=$("#printArea");a.innerHTML=`<div class="sheet-title">Joy Go 圍棋題庫</div><div class="sheet-sub"><span>${num} 題練習</span><span>姓名：____________　日期：____________</span></div><div class="print-grid n${num}"></div>`;let grid=a.querySelector(".print-grid");ch.forEach((p,i)=>{let d=document.createElement("div");d.className="puzzle";d.innerHTML=`<div class="phead">第 ${i+1} 題　${p.first}　${p.category}</div><svg class="psvg" viewBox="0 0 1000 1000"></svg>`;grid.appendChild(d);buildSvg(d.querySelector("svg"),p.size,p.stones)});setTimeout(()=>window.print(),100)}
 draw();
 
-function decodeSheetToken(token){
- try{
-   token=token.replace(/-/g,"+").replace(/_/g,"/");
-   while(token.length%4)token+="=";
-   let a=JSON.parse(decodeURIComponent(escape(atob(token))));
-   return a.map(p=>({
-     size:p.s, first:p.f, category:p.c, level:p.l,
-     stones:(p.t||[]).map(q=>({x:q[0],y:q[1],c:q[2]}))
-   }));
- }catch(e){return null}
-}
-function renderStudentWorksheet(arr){
- if(!Array.isArray(arr)||!arr.length)return false;
- document.body.innerHTML=`<header><h1>Joy Go 圍棋測驗卷</h1><small>${arr.length} 題・學生練習版（無答案）</small></header>
- <div class="student-wrap">
-   <div class="student-head"><strong>請依題目提示找出最佳下法</strong><button id="studentPrint">🖨️ 列印</button></div>
-   <div id="studentGrid" class="student-grid"></div>
- </div>`;
- let g=document.getElementById("studentGrid");
- arr.forEach((p,i)=>{
-   let d=document.createElement("div");d.className="student-card";
-   d.innerHTML=`<svg viewBox="0 0 1000 1000"></svg>
-   <div class="student-info">第 ${String(i+1).padStart(2,"0")} 題｜${esc(p.category)}｜${esc(p.first)}</div>
-   <div class="student-meta">${p.size} 路｜${esc(p.level)}</div>`;
-   g.appendChild(d);buildSvg(d.querySelector("svg"),p.size,p.stones)
- });
- document.getElementById("studentPrint").onclick=()=>window.print();
- return true;
-}
-function renderWorksheet(){
- let token=new URLSearchParams(location.search).get("w");
- if(token){
-   let arr=decodeSheetToken(token);
-   if(arr)return renderStudentWorksheet(arr);
- }
- // 相容 Beta 0.2a 舊連結
- if(location.hash.startsWith("#worksheet=")){
-   try{
-     let raw=location.hash.slice(11);
-     let arr=JSON.parse(decodeURIComponent(escape(atob(raw))));
-     return renderStudentWorksheet(arr);
-   }catch(e){}
- }
- return false;
-}
-if(!renderWorksheet())render();
+render();
 </script></body></html>
