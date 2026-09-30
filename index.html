@@ -13,10 +13,10 @@ h2{margin:0 0 12px;font-size:19px}.row,.toolbar{display:flex;gap:8px;flex-wrap:w
 .field{display:flex;flex-direction:column;gap:4px;min-width:110px}label,.hint{font-size:13px;color:#70665d}
 button,select,textarea{font:inherit;border:1px solid #bcae9d;border-radius:9px;padding:9px;background:white}button{font-weight:650}button.primary{background:var(--brown);color:#fff;border-color:var(--brown)}button.active{outline:3px solid #d5b185;background:#fff5e5}
 #board{width:100%;max-width:650px;aspect-ratio:1;display:block;margin:10px auto;background:#d9aa62;border:1px solid #9b6a32;touch-action:none}
-textarea{width:100%;min-height:70px}.cards{display:grid;gap:8px}.card{background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px;display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
-.meta{font-size:12px;color:#776b60}.badge{font-size:12px;background:#eee3d4;padding:3px 7px;border-radius:999px}.danger{color:#a4453e}
+textarea{width:100%;min-height:70px}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.card{background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px;display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+.thumb{grid-column:1/-1;width:100%;aspect-ratio:1;display:block;background:#d9aa62;border:1px solid #c8b79f;border-radius:5px;cursor:pointer}.selected{outline:3px solid #9c744d}.meta{font-size:12px;color:#776b60}.badge{font-size:12px;background:#eee3d4;padding:3px 7px;border-radius:999px}.danger{color:#a4453e}
 .printbar{border-top:1px solid var(--line);margin-top:12px;padding-top:12px;display:flex;gap:8px;flex-wrap:wrap}
-@media(max-width:800px){main{grid-template-columns:1fr}}
+@media(max-width:800px){main{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}}
 #printArea{display:none}
 @media print{
  @page{size:A4 portrait;margin:8mm} body{background:white}header,main{display:none!important}#printArea{display:block!important}
@@ -25,10 +25,10 @@ textarea{width:100%;min-height:70px}.cards{display:grid;gap:8px}.card{background
  .print-grid.n4 .psvg{height:82mm}.print-grid.n6 .psvg{height:54mm}.print-grid.n10{gap:1.5mm 5mm}.print-grid.n10 .psvg{height:30mm}
  .psvg{width:100%;display:block}
 }
-</style>
+#previewDlg{border:0;border-radius:14px;padding:12px;width:min(92vw,680px);background:#fffdf8}#previewDlg::backdrop{background:#0008}.previewTop,.previewNav{display:flex;justify-content:space-between;align-items:center;gap:8px}.previewNav{justify-content:center;margin-top:8px}#previewBoard{width:100%;aspect-ratio:1;display:block;background:#d9aa62}</style>
 </head>
 <body>
-<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.1b・SVG 棋盤修正版</small></header>
+<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.2・選題預覽版</small></header>
 <main>
 <section class="panel">
 <h2>① 建立題目</h2>
@@ -45,12 +45,12 @@ textarea{width:100%;min-height:70px}.cards{display:grid;gap:8px}.card{background
 <div class="row"><button id="save" class="primary">💾 儲存題目</button><button id="new">＋ 新題目</button></div>
 </section>
 <section class="panel">
-<h2>② 我的題庫 <span id="count" class="badge">0 題</span></h2>
+<h2>② 我的題庫 <span id="count" class="badge">0 題</span> <span id="selectedCount" class="badge">已選 0 題</span></h2>
 <div class="hint">勾選題目後，可測試 A4 4／6／10 題排版。</div>
 <div id="cards" class="cards"></div>
-<div class="printbar"><button onclick="doPrint(4)">🖨️ 4 題版</button><button onclick="doPrint(6)" class="primary">🖨️ 6 題版</button><button onclick="doPrint(10)">🖨️ 10 題版</button><button id="all">全選</button><button id="none">取消全選</button></div>
+<div class="printbar"><button onclick="doPrint(4)">🖨️ 4 題版</button><button onclick="doPrint(6)" class="primary">🖨️ 6 題版</button><button onclick="doPrint(10)">🖨️ 10 題版</button><button id="all">全選</button><button id="none">取消全選</button><button id="share">↗ LINE／分享</button></div>
 </section>
-</main>
+</main><dialog id="previewDlg"><div class="previewTop"><strong id="previewTitle">題目預覽</strong><button id="closePreview">✕ 關閉</button></div><svg id="previewBoard" viewBox="0 0 1000 1000"></svg><div id="previewMeta" class="hint"></div><div class="previewNav"><button id="prevPreview">← 上一題</button><button id="togglePreview" class="primary">勾選此題</button><button id="nextPreview">下一題 →</button></div></dialog>
 <section id="printArea"></section>
 <script>
 const NS="http://www.w3.org/2000/svg", $=s=>document.querySelector(s), svg=$("#board");
@@ -76,8 +76,13 @@ $("#clear").onclick=()=>{if(!stones.length||confirm("確定清空目前棋盤？
 function reset(){stones=[];history=[];$("#note").value="";draw()} $("#new").onclick=reset
 $("#save").onclick=()=>{if(!stones.length)return alert("請先在棋盤上建立題目。");puzzles.push({id:Date.now(),size:N,stones:JSON.parse(JSON.stringify(stones)),first:$("#first").value,category:$("#category").value,level:$("#level").value,note:$("#note").value.trim()});try{localStorage.setItem("joygo_puzzles_beta01b",JSON.stringify(puzzles))}catch(e){}render();reset();alert("題目已儲存。")}
 function esc(s){return (s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
-function render(){$("#count").textContent=puzzles.length+" 題";let b=$("#cards");b.innerHTML=puzzles.length?"":"<div class='hint' style='padding:25px;text-align:center'>目前還沒有題目。</div>";puzzles.forEach((p,i)=>{let d=document.createElement("div");d.className="card";d.innerHTML=`<input class="pick" type="checkbox" data-id="${p.id}"><div><strong>第 ${String(i+1).padStart(3,"0")} 題　${p.category}・${p.first}</strong><div class="meta">${p.size} 路｜${p.level}${p.note?"｜"+esc(p.note):""}</div></div><button class="danger" data-del="${p.id}">刪除</button>`;b.appendChild(d)});b.querySelectorAll("[data-del]").forEach(x=>x.onclick=()=>{if(confirm("確定刪除此題？")){puzzles=puzzles.filter(p=>p.id!=x.dataset.del);try{localStorage.setItem("joygo_puzzles_beta01b",JSON.stringify(puzzles))}catch(e){}render()}})}
-$("#all").onclick=()=>document.querySelectorAll(".pick").forEach(x=>x.checked=true);$("#none").onclick=()=>document.querySelectorAll(".pick").forEach(x=>x.checked=false)
+function updateSelected(){let n=document.querySelectorAll(".pick:checked").length;$("#selectedCount").textContent="已選 "+n+" 題";document.querySelectorAll(".card").forEach(c=>{let q=c.querySelector(".pick");c.classList.toggle("selected",!!q&&q.checked)})}
+function render(){$("#count").textContent=puzzles.length+" 題";let b=$("#cards");b.innerHTML=puzzles.length?"":"<div class='hint' style='padding:25px;text-align:center'>目前還沒有題目。</div>";puzzles.forEach((p,i)=>{let d=document.createElement("div");d.className="card";d.innerHTML=`<svg class="thumb" data-preview="${i}" viewBox="0 0 1000 1000"></svg><input class="pick" type="checkbox" data-id="${p.id}"><div><strong>第 ${String(i+1).padStart(3,"0")} 題　${p.category}・${p.first}</strong><div class="meta">${p.size} 路｜${p.level}${p.note?"｜"+esc(p.note):""}</div></div><button class="danger" data-del="${p.id}">刪除</button>`;b.appendChild(d);buildSvg(d.querySelector(".thumb"),p.size,p.stones)});b.querySelectorAll(".pick").forEach(x=>x.onchange=updateSelected);b.querySelectorAll("[data-preview]").forEach(x=>x.onclick=()=>openPreview(+x.dataset.preview));b.querySelectorAll("[data-del]").forEach(x=>x.onclick=()=>{if(confirm("確定刪除此題？")){puzzles=puzzles.filter(p=>p.id!=x.dataset.del);try{localStorage.setItem("joygo_puzzles_beta01b",JSON.stringify(puzzles))}catch(e){}render()}});updateSelected()}
+let previewIndex=0;
+function openPreview(i){previewIndex=i;refreshPreview();$("#previewDlg").showModal()}
+function refreshPreview(){if(!puzzles.length)return;let p=puzzles[previewIndex];buildSvg($("#previewBoard"),p.size,p.stones);$("#previewTitle").textContent=`第 ${String(previewIndex+1).padStart(3,"0")} 題`;$("#previewMeta").textContent=`${p.category}｜${p.first}｜${p.size} 路｜${p.level}${p.note?"｜"+p.note:""}`;let q=document.querySelector(`.pick[data-id="${p.id}"]`);$("#togglePreview").textContent=q&&q.checked?"取消勾選":"勾選此題"}
+$("#closePreview").onclick=()=>$("#previewDlg").close();$("#prevPreview").onclick=()=>{previewIndex=(previewIndex-1+puzzles.length)%puzzles.length;refreshPreview()};$("#nextPreview").onclick=()=>{previewIndex=(previewIndex+1)%puzzles.length;refreshPreview()};$("#togglePreview").onclick=()=>{let p=puzzles[previewIndex],q=document.querySelector(`.pick[data-id="${p.id}"]`);if(q){q.checked=!q.checked;updateSelected();refreshPreview()}};
+$("#all").onclick=()=>{document.querySelectorAll(".pick").forEach(x=>x.checked=true);updateSelected()};$("#none").onclick=()=>{document.querySelectorAll(".pick").forEach(x=>x.checked=false);updateSelected()};$("#share").onclick=async()=>{let n=document.querySelectorAll(".pick:checked").length;if(!n)return alert("請先勾選要分享的題目。");let msg=`Joy Go 圍棋練習：老師已選 ${n} 題。`;if(navigator.share){try{await navigator.share({title:"Joy Go 圍棋練習",text:msg,url:location.href})}catch(e){}}else{alert("此裝置請使用瀏覽器分享功能傳到 LINE。")}}
 window.doPrint=num=>{let ids=[...document.querySelectorAll(".pick:checked")].map(x=>+x.dataset.id),ch=puzzles.filter(p=>ids.includes(p.id)).slice(0,num);if(!ch.length)return alert("請先勾選題目。");let a=$("#printArea");a.innerHTML=`<div class="sheet-title">Joy Go 圍棋題庫</div><div class="sheet-sub"><span>${num} 題練習</span><span>姓名：____________　日期：____________</span></div><div class="print-grid n${num}"></div>`;let grid=a.querySelector(".print-grid");ch.forEach((p,i)=>{let d=document.createElement("div");d.className="puzzle";d.innerHTML=`<div class="phead">第 ${i+1} 題　${p.first}　${p.category}</div><svg class="psvg" viewBox="0 0 1000 1000"></svg>`;grid.appendChild(d);buildSvg(d.querySelector("svg"),p.size,p.stones)});setTimeout(()=>window.print(),100)}
 draw();render();
 </script></body></html>
