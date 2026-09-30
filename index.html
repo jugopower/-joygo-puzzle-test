@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Joy Go 圍棋題庫 Beta 0.2c</title>
+<title>Joy Go 圍棋題庫 Beta 0.3</title>
 <style>
 :root{--bg:#f4efe6;--panel:#fffdf8;--ink:#29251f;--brown:#765536;--line:#d9cbb8}
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",Arial,sans-serif;background:var(--bg);color:var(--ink)}
@@ -15,7 +15,7 @@ button,select,textarea{font:inherit;border:1px solid #bcae9d;border-radius:9px;p
 #board{width:100%;max-width:650px;aspect-ratio:1;display:block;margin:10px auto;background:#d9aa62;border:1px solid #9b6a32;touch-action:none}
 textarea{width:100%;min-height:70px}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.card{background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px;display:grid;grid-template-columns:28px minmax(0,1fr) auto;grid-template-areas:"thumb thumb thumb" "pick info del";gap:7px 8px;align-items:center;min-width:0}.card .thumb{grid-area:thumb}.card .pick{grid-area:pick}.card .info{grid-area:info;min-width:0}.card .danger{grid-area:del}.card strong{display:block;font-size:15px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.card .meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .thumb{width:min(100%,190px);aspect-ratio:1;justify-self:center;display:block;background:#d9aa62;border:1px solid #c8b79f;border-radius:5px;cursor:pointer}.selected{outline:3px solid #9c744d}.meta{font-size:12px;color:#776b60}.badge{font-size:12px;background:#eee3d4;padding:3px 7px;border-radius:999px}.danger{color:#a4453e}
-.printbar{border-top:1px solid var(--line);margin-top:12px;padding-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+.printbar{border-top:1px solid var(--line);margin-top:12px;padding-top:12px;display:flex;gap:8px;flex-wrap:wrap}.answerHint{font-size:13px;color:#765536;font-weight:650}.answerBadge{color:#765536;font-weight:700}
 @media(max-width:1050px){main{grid-template-columns:minmax(470px,1.45fr) minmax(390px,1fr);gap:12px}.thumb{width:min(100%,165px)}.card strong{font-size:14px}}@media(max-width:800px){main{grid-template-columns:1fr}.cards{grid-template-columns:1fr}.thumb{width:min(100%,240px)}}
 #printArea{display:none}
 @media print{
@@ -36,7 +36,7 @@ textarea{width:100%;min-height:70px}.cards{display:grid;grid-template-columns:re
 </style>
 </head>
 <body>
-<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.2c・學生測驗卷分享版</small></header>
+<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.3・老師答案卷版</small></header>
 <main>
 <section class="panel">
 <h2>① 建立題目</h2>
@@ -46,66 +46,62 @@ textarea{width:100%;min-height:70px}.cards{display:grid;grid-template-columns:re
 <div class="field"><label>分類</label><select id="category"><option>死活</option><option>手筋</option><option>官子</option><option>佈局</option><option>中盤</option><option>其他</option></select></div>
 <div class="field"><label>難度</label><select id="level"><option>入門</option><option>級位</option><option>初段～三段</option><option>四段～六段</option><option>高段</option></select></div>
 </div>
-<div class="toolbar"><button id="black" class="active">● 擺黑棋</button><button id="white">○ 擺白棋</button><button id="erase">⌫ 刪除棋子</button><button id="undo">↶ 復原</button><button id="clear" class="danger">清空棋盤</button></div>
+<div class="toolbar"><button id="black" class="active">● 擺黑棋</button><button id="white">○ 擺白棋</button><button id="erase">⌫ 刪除棋子</button><button id="answer">🔑 設定答案</button><button id="undo">↶ 復原</button><button id="clear" class="danger">清空棋盤</button></div><div id="answerStatus" class="answerHint">目前：建立題目棋形</div>
 <svg id="board" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet"></svg>
 <div class="hint">操作：選「擺黑棋／擺白棋」後直接點棋盤交叉點。這一版棋盤改用 SVG，不再使用 Canvas。</div>
 <div class="field" style="margin-top:10px"><label>題目／提示（可留白）</label><textarea id="note" placeholder="例如：黑先，請找出活棋的要點。"></textarea></div>
-<div class="row"><button id="save" class="primary">💾 儲存題目</button><button id="new">＋ 新題目</button></div>
+<div class="row"><button id="save" class="primary">💾 儲存題目＋答案</button><button id="new">＋ 新題目</button><button id="clearAnswer">清除答案</button></div>
 </section>
 <section class="panel">
 <h2>② 我的題庫 <span id="count" class="badge">0 題</span> <span id="selectedCount" class="badge">已選 0 題</span></h2>
 <div class="hint">勾選題目後，可測試 A4 4／6／10 題排版。</div>
 <div id="cards" class="cards"></div>
-<div class="printbar"><button onclick="doPrint(4)">🖨️ 4 題版</button><button onclick="doPrint(6)" class="primary">🖨️ 6 題版</button><button onclick="doPrint(10)">🖨️ 10 題版</button><button id="all">全選</button><button id="none">取消全選</button><button id="share">↗ 分享測驗卷檔案到 LINE</button></div>
+<div class="printbar"><button onclick="doPrint(4,false)">📄 學生 4 題</button><button onclick="doPrint(6,false)" class="primary">📄 學生 6 題</button><button onclick="doPrint(10,false)">📄 學生 10 題</button><button onclick="doPrint(4,true)">🔑 答案 4 題</button><button onclick="doPrint(6,true)">🔑 答案 6 題</button><button onclick="doPrint(10,true)">🔑 答案 10 題</button><button id="all">全選</button><button id="none">取消全選</button><button id="share">↗ 分享學生測驗卷到 LINE</button><button id="shareAnswer">🔑 分享老師答案卷</button></div>
 </section>
 </main><dialog id="previewDlg"><div class="previewTop"><strong id="previewTitle">題目預覽</strong><button id="closePreview">✕ 關閉</button></div><svg id="previewBoard" viewBox="0 0 1000 1000"></svg><div id="previewMeta" class="hint"></div><div class="previewNav"><button id="prevPreview">← 上一題</button><button id="togglePreview" class="primary">勾選此題</button><button id="nextPreview">下一題 →</button></div></dialog>
 <section id="printArea"></section>
 <script>
 const NS="http://www.w3.org/2000/svg", $=s=>document.querySelector(s), svg=$("#board");
-let N=19, stones=[], mode="B", history=[], puzzles=[];
+let N=19, stones=[], answers=[], mode="B", history=[], puzzles=[];
 try{puzzles=JSON.parse(localStorage.getItem("joygo_puzzles_beta01b")||"[]")}catch(e){puzzles=[]}
 function el(tag,a={}){let z=document.createElementNS(NS,tag);for(let k in a)z.setAttribute(k,a[k]);return z}
 function stars(n){if(n===19)return [[3,3],[9,3],[15,3],[3,9],[9,9],[15,9],[3,15],[9,15],[15,15]];if(n===13)return [[3,3],[9,3],[6,6],[3,9],[9,9]];return [[2,2],[6,2],[4,4],[2,6],[6,6]]}
-function buildSvg(target,n,ss){
+function buildSvg(target,n,ss,ans=[]){
  target.innerHTML=""; target.setAttribute("viewBox","0 0 1000 1000");
  target.appendChild(el("rect",{x:0,y:0,width:1000,height:1000,fill:"#d9aa62"}));
  const p=65,step=870/(n-1);
  let g=el("g",{"stroke":"#3a2b1d","stroke-width":"2","shape-rendering":"geometricPrecision"});
  for(let i=0;i<n;i++){let q=p+i*step;g.appendChild(el("line",{x1:p,y1:q,x2:935,y2:q}));g.appendChild(el("line",{x1:q,y1:p,x2:q,y2:935}))}target.appendChild(g);
  let sg=el("g",{fill:"#2b2119"});stars(n).forEach(([x,y])=>sg.appendChild(el("circle",{cx:p+x*step,cy:p+y*step,r:6})));target.appendChild(sg);
- let cg=el("g");ss.forEach(s=>cg.appendChild(el("circle",{cx:p+s.x*step,cy:p+s.y*step,r:step*.43,fill:s.c==="B"?"#111":"#fff",stroke:"#111","stroke-width":"2"})));target.appendChild(cg)
+ let cg=el("g");ss.forEach(s=>cg.appendChild(el("circle",{cx:p+s.x*step,cy:p+s.y*step,r:step*.43,fill:s.c==="B"?"#111":"#fff",stroke:"#111","stroke-width":"2"})));target.appendChild(cg);
+ if(ans&&ans.length){let ag=el("g");ans.forEach((a,i)=>{let fill=a.c==="B"?"#111":"#fff",txt=a.c==="B"?"#fff":"#111";ag.appendChild(el("circle",{cx:p+a.x*step,cy:p+a.y*step,r:step*.43,fill,stroke:"#b22","stroke-width":"4"}));let t=el("text",{x:p+a.x*step,y:p+a.y*step+step*.13,"text-anchor":"middle","font-size":step*.42,"font-weight":"700",fill:txt});t.textContent=String(i+1);ag.appendChild(t)});target.appendChild(ag)}
 }
-function draw(){buildSvg(svg,N,stones)}
-$("#size").onchange=e=>{N=+e.target.value;stones=[];history=[];draw()}
-;["black","white","erase"].forEach(id=>$("#"+id).onclick=()=>{mode=id==="black"?"B":id==="white"?"W":"E";["black","white","erase"].forEach(x=>$("#"+x).classList.toggle("active",x===id))})
-svg.addEventListener("pointerdown",e=>{let r=svg.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*1000,vy=(e.clientY-r.top)/r.height*1000,p=65,step=870/(N-1),x=Math.round((vx-p)/step),y=Math.round((vy-p)/step);if(x<0||y<0||x>=N||y>=N)return;history.push(JSON.stringify(stones));let k=stones.findIndex(s=>s.x===x&&s.y===y);if(mode==="E"){if(k>=0)stones.splice(k,1)}else if(k<0)stones.push({x,y,c:mode});else stones[k].c=mode;draw()})
-$("#undo").onclick=()=>{if(history.length){stones=JSON.parse(history.pop());draw()}}
-$("#clear").onclick=()=>{if(!stones.length||confirm("確定清空目前棋盤？")){history.push(JSON.stringify(stones));stones=[];draw()}}
-function reset(){stones=[];history=[];$("#note").value="";draw()} $("#new").onclick=reset
-$("#save").onclick=()=>{if(!stones.length)return alert("請先在棋盤上建立題目。");puzzles.push({id:Date.now(),size:N,stones:JSON.parse(JSON.stringify(stones)),first:$("#first").value,category:$("#category").value,level:$("#level").value,note:$("#note").value.trim()});try{localStorage.setItem("joygo_puzzles_beta01b",JSON.stringify(puzzles))}catch(e){}render();reset();alert("題目已儲存。")}
+function draw(){buildSvg(svg,N,stones,answers);$("#answerStatus").textContent=mode==="A"?`🔑 設定答案中：已輸入 ${answers.length} 手（依序點正解）`:`目前：建立題目棋形${answers.length?`｜已有答案 ${answers.length} 手`:""}`;}
+$("#size").onchange=e=>{N=+e.target.value;stones=[];answers=[];history=[];draw()}
+;["black","white","erase"].forEach(id=>$("#"+id).onclick=()=>{mode=id==="black"?"B":id==="white"?"W":"E";["black","white","erase","answer"].forEach(x=>$("#"+x).classList.toggle("active",x===id));draw()});$("#answer").onclick=()=>{mode="A";["black","white","erase","answer"].forEach(x=>$("#"+x).classList.toggle("active",x==="answer"));draw()}
+svg.addEventListener("pointerdown",e=>{let r=svg.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*1000,vy=(e.clientY-r.top)/r.height*1000,p=65,step=870/(N-1),x=Math.round((vx-p)/step),y=Math.round((vy-p)/step);if(x<0||y<0||x>=N||y>=N)return;history.push(JSON.stringify({stones,answers}));let k=stones.findIndex(s=>s.x===x&&s.y===y);if(mode==="A"){if(k>=0||answers.some(a=>a.x===x&&a.y===y))return history.pop();let start=$("#first").value==="黑先"?"B":"W",c=(answers.length%2===0)?start:(start==="B"?"W":"B");answers.push({x,y,c});}else if(mode==="E"){if(k>=0)stones.splice(k,1)}else if(k<0)stones.push({x,y,c:mode});else stones[k].c=mode;draw()})
+$("#undo").onclick=()=>{if(history.length){let h=JSON.parse(history.pop());if(Array.isArray(h)){stones=h}else{stones=h.stones||[];answers=h.answers||[]}draw()}}
+$("#clear").onclick=()=>{if(!stones.length||confirm("確定清空目前棋盤？")){history.push(JSON.stringify({stones,answers}));stones=[];answers=[];draw()}}
+function reset(){stones=[];answers=[];history=[];mode="B";$("#note").value="";["black","white","erase","answer"].forEach(x=>$("#"+x).classList.toggle("active",x==="black"));draw()} $("#new").onclick=reset;$("#clearAnswer").onclick=()=>{answers=[];draw()}
+$("#save").onclick=()=>{if(!stones.length)return alert("請先在棋盤上建立題目。");puzzles.push({id:Date.now(),size:N,stones:JSON.parse(JSON.stringify(stones)),first:$("#first").value,category:$("#category").value,level:$("#level").value,note:$("#note").value.trim(),answer:JSON.parse(JSON.stringify(answers))});try{localStorage.setItem("joygo_puzzles_beta01b",JSON.stringify(puzzles))}catch(e){}render();reset();alert(answers.length?"題目與答案已儲存。":"題目已儲存（尚未設定答案）。")}
 function esc(s){return (s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function updateSelected(){let n=document.querySelectorAll(".pick:checked").length;$("#selectedCount").textContent="已選 "+n+" 題";document.querySelectorAll(".card").forEach(c=>{let q=c.querySelector(".pick");c.classList.toggle("selected",!!q&&q.checked)})}
-function render(){$("#count").textContent=puzzles.length+" 題";let b=$("#cards");b.innerHTML=puzzles.length?"":"<div class='hint' style='padding:25px;text-align:center'>目前還沒有題目。</div>";puzzles.forEach((p,i)=>{let d=document.createElement("div");d.className="card";d.innerHTML=`<svg class="thumb" data-preview="${i}" viewBox="0 0 1000 1000"></svg><input class="pick" type="checkbox" data-id="${p.id}"><div class="info"><strong>第 ${String(i+1).padStart(3,"0")} 題｜${p.category}｜${p.first}</strong><div class="meta">${p.size} 路｜${p.level}${p.note?"｜"+esc(p.note):""}</div></div><button class="danger" data-del="${p.id}">刪除</button>`;b.appendChild(d);buildSvg(d.querySelector(".thumb"),p.size,p.stones)});b.querySelectorAll(".pick").forEach(x=>x.onchange=updateSelected);b.querySelectorAll("[data-preview]").forEach(x=>x.onclick=()=>openPreview(+x.dataset.preview));b.querySelectorAll("[data-del]").forEach(x=>x.onclick=()=>{if(confirm("確定刪除此題？")){puzzles=puzzles.filter(p=>p.id!=x.dataset.del);try{localStorage.setItem("joygo_puzzles_beta01b",JSON.stringify(puzzles))}catch(e){}render()}});updateSelected()}
+function render(){$("#count").textContent=puzzles.length+" 題";let b=$("#cards");b.innerHTML=puzzles.length?"":"<div class='hint' style='padding:25px;text-align:center'>目前還沒有題目。</div>";puzzles.forEach((p,i)=>{let d=document.createElement("div");d.className="card";d.innerHTML=`<svg class="thumb" data-preview="${i}" viewBox="0 0 1000 1000"></svg><input class="pick" type="checkbox" data-id="${p.id}"><div class="info"><strong>第 ${String(i+1).padStart(3,"0")} 題｜${p.category}｜${p.first}</strong><div class="meta">${p.size} 路｜${p.level}｜<span class="answerBadge">${(p.answer||[]).length?"答案 "+p.answer.length+" 手":"未設答案"}</span>${p.note?"｜"+esc(p.note):""}</div></div><button class="danger" data-del="${p.id}">刪除</button>`;b.appendChild(d);buildSvg(d.querySelector(".thumb"),p.size,p.stones)});b.querySelectorAll(".pick").forEach(x=>x.onchange=updateSelected);b.querySelectorAll("[data-preview]").forEach(x=>x.onclick=()=>openPreview(+x.dataset.preview));b.querySelectorAll("[data-del]").forEach(x=>x.onclick=()=>{if(confirm("確定刪除此題？")){puzzles=puzzles.filter(p=>p.id!=x.dataset.del);try{localStorage.setItem("joygo_puzzles_beta01b",JSON.stringify(puzzles))}catch(e){}render()}});updateSelected()}
 let previewIndex=0;
 function openPreview(i){previewIndex=i;refreshPreview();$("#previewDlg").showModal()}
 function refreshPreview(){if(!puzzles.length)return;let p=puzzles[previewIndex];buildSvg($("#previewBoard"),p.size,p.stones);$("#previewTitle").textContent=`第 ${String(previewIndex+1).padStart(3,"0")} 題`;$("#previewMeta").textContent=`${p.category}｜${p.first}｜${p.size} 路｜${p.level}${p.note?"｜"+p.note:""}`;let q=document.querySelector(`.pick[data-id="${p.id}"]`);$("#togglePreview").textContent=q&&q.checked?"取消勾選":"勾選此題"}
 $("#closePreview").onclick=()=>$("#previewDlg").close();$("#prevPreview").onclick=()=>{previewIndex=(previewIndex-1+puzzles.length)%puzzles.length;refreshPreview()};$("#nextPreview").onclick=()=>{previewIndex=(previewIndex+1)%puzzles.length;refreshPreview()};$("#togglePreview").onclick=()=>{let p=puzzles[previewIndex],q=document.querySelector(`.pick[data-id="${p.id}"]`);if(q){q.checked=!q.checked;updateSelected();refreshPreview()}};
-$("#all").onclick=()=>{document.querySelectorAll(".pick").forEach(x=>x.checked=true);updateSelected()};$("#none").onclick=()=>{document.querySelectorAll(".pick").forEach(x=>x.checked=false);updateSelected()};$("#share").onclick=()=>{
- let ids=[...document.querySelectorAll(".pick:checked")].map(x=>+x.dataset.id);
- let chosen=puzzles.filter(p=>ids.includes(p.id));
- if(!chosen.length)return alert("請先勾選要分享的題目。");
- if(chosen.length>10)return alert("測驗卷一次最多分享 10 題。");
- let n=chosen.length<=4?4:chosen.length<=6?6:10;
- let w=window.open("","_blank");
- if(!w)return alert("Safari 阻擋了測驗卷視窗，請允許彈出式視窗後再試一次。");
- w.document.write(`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Joy Go 圍棋測驗卷</title><style>
- @page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"PingFang TC",Arial,sans-serif;color:#29251f;margin:0}.actions{padding:12px;background:#f4efe6;text-align:center}.actions button{font:inherit;padding:10px 16px;border:0;border-radius:9px;background:#765536;color:#fff;font-weight:700}.sheet{max-width:194mm;margin:auto}.title{text-align:center;font-size:16pt;font-weight:700}.sub{display:flex;justify-content:space-between;font-size:9pt;margin:2mm 0 3mm}.grid{display:grid;grid-template-columns:1fr 1fr;gap:3mm 5mm}.puzzle{break-inside:avoid}.phead{font-size:9pt;font-weight:700;margin-bottom:1mm}.psvg{width:100%;display:block}.n4 .psvg{height:82mm}.n6 .psvg{height:54mm}.n10{gap:1.5mm 5mm}.n10 .psvg{height:30mm}@media print{.actions{display:none}}
- </style></head><body><div class="actions"><button onclick="window.print()">🖨️ 產生 PDF／列印</button><div>iPad：進入列印預覽後，用「分享」傳到 LINE。</div></div><div class="sheet"><div class="title">Joy Go 圍棋測驗卷</div><div class="sub"><span>${chosen.length} 題練習</span><span>姓名：____________　日期：____________</span></div><div id="grid" class="grid n${n}"></div></div></body></html>`);
- w.document.close();
- let grid=w.document.getElementById("grid");
- chosen.forEach((p,i)=>{let d=w.document.createElement("div");d.className="puzzle";d.innerHTML=`<div class="phead">第 ${i+1} 題　${esc(p.first)}　${esc(p.category)}</div><svg class="psvg" viewBox="0 0 1000 1000"></svg>`;grid.appendChild(d);buildSvg(d.querySelector("svg"),p.size,p.stones)});
-};
-window.doPrint=num=>{let ids=[...document.querySelectorAll(".pick:checked")].map(x=>+x.dataset.id),ch=puzzles.filter(p=>ids.includes(p.id)).slice(0,num);if(!ch.length)return alert("請先勾選題目。");let a=$("#printArea");a.innerHTML=`<div class="sheet-title">Joy Go 圍棋題庫</div><div class="sheet-sub"><span>${num} 題練習</span><span>姓名：____________　日期：____________</span></div><div class="print-grid n${num}"></div>`;let grid=a.querySelector(".print-grid");ch.forEach((p,i)=>{let d=document.createElement("div");d.className="puzzle";d.innerHTML=`<div class="phead">第 ${i+1} 題　${p.first}　${p.category}</div><svg class="psvg" viewBox="0 0 1000 1000"></svg>`;grid.appendChild(d);buildSvg(d.querySelector("svg"),p.size,p.stones)});setTimeout(()=>window.print(),100)}
+$("#all").onclick=()=>{document.querySelectorAll(".pick").forEach(x=>x.checked=true);updateSelected()};$("#none").onclick=()=>{document.querySelectorAll(".pick").forEach(x=>x.checked=false);updateSelected()};
+function openShare(withAnswer=false){
+ let ids=[...document.querySelectorAll(".pick:checked")].map(x=>+x.dataset.id),chosen=puzzles.filter(p=>ids.includes(p.id));
+ if(!chosen.length)return alert("請先勾選要分享的題目。");if(chosen.length>10)return alert("一次最多分享 10 題。");
+ if(withAnswer&&chosen.some(p=>!(p.answer||[]).length)&&!confirm("部分題目尚未設定答案，仍要產生老師答案卷嗎？"))return;
+ let n=chosen.length<=4?4:chosen.length<=6?6:10,w=window.open("","_blank");if(!w)return alert("Safari 阻擋了視窗，請允許彈出式視窗後再試一次。");
+ let title=withAnswer?"Joy Go 圍棋老師答案卷":"Joy Go 圍棋測驗卷";
+ w.document.write(`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>@page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"PingFang TC",Arial,sans-serif;color:#29251f;margin:0}.actions{padding:12px;background:#f4efe6;text-align:center}.actions button{font:inherit;padding:10px 16px;border:0;border-radius:9px;background:#765536;color:#fff;font-weight:700}.sheet{max-width:194mm;margin:auto}.title{text-align:center;font-size:16pt;font-weight:700}.sub{display:flex;justify-content:space-between;font-size:9pt;margin:2mm 0 3mm}.grid{display:grid;grid-template-columns:1fr 1fr;gap:3mm 5mm}.puzzle{break-inside:avoid}.phead{font-size:9pt;font-weight:700;margin-bottom:1mm}.psvg{width:100%;display:block}.n4 .psvg{height:82mm}.n6 .psvg{height:54mm}.n10{gap:1.5mm 5mm}.n10 .psvg{height:30mm}@media print{.actions{display:none}}</style></head><body><div class="actions"><button onclick="window.print()">🖨️ 產生 PDF／列印</button><div>iPad：進入列印預覽後，用「分享」傳到 LINE。</div></div><div class="sheet"><div class="title">${title}</div><div class="sub"><span>${chosen.length} 題${withAnswer?"答案":"練習"}</span><span>${withAnswer?"老師用":"姓名：____________　日期：____________"}</span></div><div id="grid" class="grid n${n}"></div></div></body></html>`);w.document.close();let grid=w.document.getElementById("grid");chosen.forEach((p,i)=>{let d=w.document.createElement("div");d.className="puzzle";d.innerHTML=`<div class="phead">第 ${i+1} 題　${esc(p.first)}　${esc(p.category)}${withAnswer&&!(p.answer||[]).length?"　（未設答案）":""}</div><svg class="psvg" viewBox="0 0 1000 1000"></svg>`;grid.appendChild(d);buildSvg(d.querySelector("svg"),p.size,p.stones,withAnswer?(p.answer||[]):[])});
+}
+$("#share").onclick=()=>openShare(false);$("#shareAnswer").onclick=()=>openShare(true);
+window.doPrint=(num,withAnswer=false)=>{let ids=[...document.querySelectorAll(".pick:checked")].map(x=>+x.dataset.id),ch=puzzles.filter(p=>ids.includes(p.id)).slice(0,num);if(!ch.length)return alert("請先勾選題目。");if(withAnswer&&ch.some(p=>!(p.answer||[]).length)&&!confirm("部分題目尚未設定答案，仍要列印嗎？"))return;let a=$("#printArea"),title=withAnswer?"Joy Go 圍棋老師答案卷":"Joy Go 圍棋測驗卷";a.innerHTML=`<div class="sheet-title">${title}</div><div class="sheet-sub"><span>${ch.length} 題${withAnswer?"答案":"練習"}</span><span>${withAnswer?"老師用":"姓名：____________　日期：____________"}</span></div><div class="print-grid n${num}"></div>`;let grid=a.querySelector(".print-grid");ch.forEach((p,i)=>{let d=document.createElement("div");d.className="puzzle";d.innerHTML=`<div class="phead">第 ${i+1} 題　${p.first}　${p.category}${withAnswer&&!(p.answer||[]).length?"　（未設答案）":""}</div><svg class="psvg" viewBox="0 0 1000 1000"></svg>`;grid.appendChild(d);buildSvg(d.querySelector("svg"),p.size,p.stones,withAnswer?(p.answer||[]):[])});setTimeout(()=>window.print(),100)}
 draw();
 
 render();
