@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Joy Go 圍棋題庫 Beta 0.3</title>
+<title>Joy Go 圍棋題庫 Beta 0.3a</title>
 <style>
 :root{--bg:#f4efe6;--panel:#fffdf8;--ink:#29251f;--brown:#765536;--line:#d9cbb8}
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",Arial,sans-serif;background:var(--bg);color:var(--ink)}
@@ -36,7 +36,7 @@ textarea{width:100%;min-height:70px}.cards{display:grid;grid-template-columns:re
 </style>
 </head>
 <body>
-<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.3・老師答案卷版</small></header>
+<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.3a・老師答案卷版</small></header>
 <main>
 <section class="panel">
 <h2>① 建立題目</h2>
@@ -83,7 +83,7 @@ svg.addEventListener("pointerdown",e=>{let r=svg.getBoundingClientRect(),vx=(e.c
 $("#undo").onclick=()=>{if(history.length){let h=JSON.parse(history.pop());if(Array.isArray(h)){stones=h}else{stones=h.stones||[];answers=h.answers||[]}draw()}}
 $("#clear").onclick=()=>{if(!stones.length||confirm("確定清空目前棋盤？")){history.push(JSON.stringify({stones,answers}));stones=[];answers=[];draw()}}
 function reset(){stones=[];answers=[];history=[];mode="B";$("#note").value="";["black","white","erase","answer"].forEach(x=>$("#"+x).classList.toggle("active",x==="black"));draw()} $("#new").onclick=reset;$("#clearAnswer").onclick=()=>{answers=[];draw()}
-$("#save").onclick=()=>{if(!stones.length)return alert("請先在棋盤上建立題目。");puzzles.push({id:Date.now(),size:N,stones:JSON.parse(JSON.stringify(stones)),first:$("#first").value,category:$("#category").value,level:$("#level").value,note:$("#note").value.trim(),answer:JSON.parse(JSON.stringify(answers))});try{localStorage.setItem("joygo_puzzles_beta01b",JSON.stringify(puzzles))}catch(e){}render();reset();alert(answers.length?"題目與答案已儲存。":"題目已儲存（尚未設定答案）。")}
+$("#save").onclick=()=>{if(!stones.length)return alert("請先在棋盤上建立題目。");puzzles.push({id:Date.now(),size:N,stones:JSON.parse(JSON.stringify(stones)),first:$("#first").value,category:$("#category").value,level:$("#level").value,note:$("#note").value.trim(),answer:JSON.parse(JSON.stringify(answers))});try{localStorage.setItem("joygo_puzzles_beta01b",JSON.stringify(puzzles))}catch(e){}const savedAnswerCount=answers.length;render();reset();alert(savedAnswerCount?`題目＋${savedAnswerCount}手答案已儲存。`:"題目已儲存（尚未設定答案）。")}
 function esc(s){return (s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function updateSelected(){let n=document.querySelectorAll(".pick:checked").length;$("#selectedCount").textContent="已選 "+n+" 題";document.querySelectorAll(".card").forEach(c=>{let q=c.querySelector(".pick");c.classList.toggle("selected",!!q&&q.checked)})}
 function render(){$("#count").textContent=puzzles.length+" 題";let b=$("#cards");b.innerHTML=puzzles.length?"":"<div class='hint' style='padding:25px;text-align:center'>目前還沒有題目。</div>";puzzles.forEach((p,i)=>{let d=document.createElement("div");d.className="card";d.innerHTML=`<svg class="thumb" data-preview="${i}" viewBox="0 0 1000 1000"></svg><input class="pick" type="checkbox" data-id="${p.id}"><div class="info"><strong>第 ${String(i+1).padStart(3,"0")} 題｜${p.category}｜${p.first}</strong><div class="meta">${p.size} 路｜${p.level}｜<span class="answerBadge">${(p.answer||[]).length?"答案 "+p.answer.length+" 手":"未設答案"}</span>${p.note?"｜"+esc(p.note):""}</div></div><button class="danger" data-del="${p.id}">刪除</button>`;b.appendChild(d);buildSvg(d.querySelector(".thumb"),p.size,p.stones)});b.querySelectorAll(".pick").forEach(x=>x.onchange=updateSelected);b.querySelectorAll("[data-preview]").forEach(x=>x.onclick=()=>openPreview(+x.dataset.preview));b.querySelectorAll("[data-del]").forEach(x=>x.onclick=()=>{if(confirm("確定刪除此題？")){puzzles=puzzles.filter(p=>p.id!=x.dataset.del);try{localStorage.setItem("joygo_puzzles_beta01b",JSON.stringify(puzzles))}catch(e){}render()}});updateSelected()}
