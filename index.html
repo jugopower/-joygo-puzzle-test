@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Joy Go 圍棋題庫 Beta 0.2a</title>
+<title>Joy Go 圍棋題庫 Beta 0.2b</title>
 <style>
 :root{--bg:#f4efe6;--panel:#fffdf8;--ink:#29251f;--brown:#765536;--line:#d9cbb8}
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",Arial,sans-serif;background:var(--bg);color:var(--ink)}
@@ -25,10 +25,18 @@ textarea{width:100%;min-height:70px}.cards{display:grid;grid-template-columns:re
  .print-grid.n4 .psvg{height:82mm}.print-grid.n6 .psvg{height:54mm}.print-grid.n10{gap:1.5mm 5mm}.print-grid.n10 .psvg{height:30mm}
  .psvg{width:100%;display:block}
 }
-#previewDlg{border:0;border-radius:14px;padding:12px;width:min(92vw,680px);background:#fffdf8}#previewDlg::backdrop{background:#0008}.previewTop,.previewNav{display:flex;justify-content:space-between;align-items:center;gap:8px}.previewNav{justify-content:center;margin-top:8px}#previewBoard{width:100%;aspect-ratio:1;display:block;background:#d9aa62}</style>
+#previewDlg{border:0;border-radius:14px;padding:12px;width:min(92vw,680px);background:#fffdf8}#previewDlg::backdrop{background:#0008}.previewTop,.previewNav{display:flex;justify-content:space-between;align-items:center;gap:8px}.previewNav{justify-content:center;margin-top:8px}#previewBoard{width:100%;aspect-ratio:1;display:block;background:#d9aa62}
+.student-wrap{max-width:980px;margin:auto;padding:16px}
+.student-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.student-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.student-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px}
+.student-card svg{width:100%;aspect-ratio:1;display:block;background:#d9aa62;border-radius:6px}
+.student-info{font-weight:700;margin-top:8px}.student-meta{font-size:13px;color:#776b60;margin-top:3px}
+@media(max-width:700px){.student-grid{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.2a・iPad 橫式排版修正版</small></header>
+<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.2b・學生測驗卷分享版</small></header>
 <main>
 <section class="panel">
 <h2>① 建立題目</h2>
@@ -82,7 +90,71 @@ let previewIndex=0;
 function openPreview(i){previewIndex=i;refreshPreview();$("#previewDlg").showModal()}
 function refreshPreview(){if(!puzzles.length)return;let p=puzzles[previewIndex];buildSvg($("#previewBoard"),p.size,p.stones);$("#previewTitle").textContent=`第 ${String(previewIndex+1).padStart(3,"0")} 題`;$("#previewMeta").textContent=`${p.category}｜${p.first}｜${p.size} 路｜${p.level}${p.note?"｜"+p.note:""}`;let q=document.querySelector(`.pick[data-id="${p.id}"]`);$("#togglePreview").textContent=q&&q.checked?"取消勾選":"勾選此題"}
 $("#closePreview").onclick=()=>$("#previewDlg").close();$("#prevPreview").onclick=()=>{previewIndex=(previewIndex-1+puzzles.length)%puzzles.length;refreshPreview()};$("#nextPreview").onclick=()=>{previewIndex=(previewIndex+1)%puzzles.length;refreshPreview()};$("#togglePreview").onclick=()=>{let p=puzzles[previewIndex],q=document.querySelector(`.pick[data-id="${p.id}"]`);if(q){q.checked=!q.checked;updateSelected();refreshPreview()}};
-$("#all").onclick=()=>{document.querySelectorAll(".pick").forEach(x=>x.checked=true);updateSelected()};$("#none").onclick=()=>{document.querySelectorAll(".pick").forEach(x=>x.checked=false);updateSelected()};$("#share").onclick=async()=>{let ids=[...document.querySelectorAll(".pick:checked")].map(x=>+x.dataset.id);let chosen=puzzles.filter(p=>ids.includes(p.id));if(!chosen.length)return alert("請先勾選要分享的題目。");let payload=btoa(unescape(encodeURIComponent(JSON.stringify(chosen))));let url=location.origin+location.pathname+"#worksheet="+payload;let msg=`Joy Go 圍棋測驗卷：${chosen.length} 題。點開連結即可練習。`;if(navigator.share){try{await navigator.share({title:"Joy Go 圍棋測驗卷",text:msg,url})}catch(e){}}else{prompt("請複製這個測驗卷網址傳到 LINE：",url)}}
+$("#all").onclick=()=>{document.querySelectorAll(".pick").forEach(x=>x.checked=true);updateSelected()};$("#none").onclick=()=>{document.querySelectorAll(".pick").forEach(x=>x.checked=false);updateSelected()};$("#share").onclick=async()=>{
+ let ids=[...document.querySelectorAll(".pick:checked")].map(x=>+x.dataset.id);
+ let chosen=puzzles.filter(p=>ids.includes(p.id));
+ if(!chosen.length)return alert("請先勾選要分享的題目。");
+ if(chosen.length>10)return alert("測驗卷一次最多分享 10 題。");
+
+ // Beta 0.2b：先把測驗卷存成精簡資料，只保留學生作答需要的內容。
+ let sheet=chosen.map(p=>({s:p.size,f:p.first,c:p.category,l:p.level,t:p.stones.map(q=>[q.x,q.y,q.c])}));
+ let json=JSON.stringify(sheet);
+ let token=btoa(unescape(encodeURIComponent(json))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+ let url=location.origin+location.pathname+"?w="+encodeURIComponent(token);
+ let msg=`Joy Go 圍棋測驗卷｜${chosen.length} 題\n朱老師分享了一份圍棋練習題，點開連結即可練習。`;
+
+ if(navigator.share){
+   try{await navigator.share({title:`Joy Go 圍棋測驗卷｜${chosen.length} 題`,text:msg,url});return}catch(e){}
+ }
+ prompt("請複製下面內容傳到 LINE：",msg+"\n"+url);
+}
 window.doPrint=num=>{let ids=[...document.querySelectorAll(".pick:checked")].map(x=>+x.dataset.id),ch=puzzles.filter(p=>ids.includes(p.id)).slice(0,num);if(!ch.length)return alert("請先勾選題目。");let a=$("#printArea");a.innerHTML=`<div class="sheet-title">Joy Go 圍棋題庫</div><div class="sheet-sub"><span>${num} 題練習</span><span>姓名：____________　日期：____________</span></div><div class="print-grid n${num}"></div>`;let grid=a.querySelector(".print-grid");ch.forEach((p,i)=>{let d=document.createElement("div");d.className="puzzle";d.innerHTML=`<div class="phead">第 ${i+1} 題　${p.first}　${p.category}</div><svg class="psvg" viewBox="0 0 1000 1000"></svg>`;grid.appendChild(d);buildSvg(d.querySelector("svg"),p.size,p.stones)});setTimeout(()=>window.print(),100)}
-draw();function renderWorksheetFromHash(){if(!location.hash.startsWith("#worksheet="))return false;try{let raw=location.hash.slice(11),arr=JSON.parse(decodeURIComponent(escape(atob(raw))));document.body.innerHTML=`<header><h1>Joy Go 圍棋測驗卷</h1><small>${arr.length} 題・學生練習版（無答案）</small></header><main style="display:block;max-width:900px"><section><div id="studentGrid" class="cards"></div></section></main>`;let g=document.getElementById("studentGrid");arr.forEach((p,i)=>{let d=document.createElement("div");d.className="card";d.innerHTML=`<svg class="thumb" viewBox="0 0 1000 1000"></svg><div class="info" style="grid-column:1/-1"><strong>第 ${i+1} 題｜${p.category}｜${p.first}</strong><div class="meta">${p.size} 路｜${p.level}</div></div>`;g.appendChild(d);buildSvg(d.querySelector("svg"),p.size,p.stones)});return true}catch(e){return false}}if(!renderWorksheetFromHash())render();
+draw();
+
+function decodeSheetToken(token){
+ try{
+   token=token.replace(/-/g,"+").replace(/_/g,"/");
+   while(token.length%4)token+="=";
+   let a=JSON.parse(decodeURIComponent(escape(atob(token))));
+   return a.map(p=>({
+     size:p.s, first:p.f, category:p.c, level:p.l,
+     stones:(p.t||[]).map(q=>({x:q[0],y:q[1],c:q[2]}))
+   }));
+ }catch(e){return null}
+}
+function renderStudentWorksheet(arr){
+ if(!Array.isArray(arr)||!arr.length)return false;
+ document.body.innerHTML=`<header><h1>Joy Go 圍棋測驗卷</h1><small>${arr.length} 題・學生練習版（無答案）</small></header>
+ <div class="student-wrap">
+   <div class="student-head"><strong>請依題目提示找出最佳下法</strong><button id="studentPrint">🖨️ 列印</button></div>
+   <div id="studentGrid" class="student-grid"></div>
+ </div>`;
+ let g=document.getElementById("studentGrid");
+ arr.forEach((p,i)=>{
+   let d=document.createElement("div");d.className="student-card";
+   d.innerHTML=`<svg viewBox="0 0 1000 1000"></svg>
+   <div class="student-info">第 ${String(i+1).padStart(2,"0")} 題｜${esc(p.category)}｜${esc(p.first)}</div>
+   <div class="student-meta">${p.size} 路｜${esc(p.level)}</div>`;
+   g.appendChild(d);buildSvg(d.querySelector("svg"),p.size,p.stones)
+ });
+ document.getElementById("studentPrint").onclick=()=>window.print();
+ return true;
+}
+function renderWorksheet(){
+ let token=new URLSearchParams(location.search).get("w");
+ if(token){
+   let arr=decodeSheetToken(token);
+   if(arr)return renderStudentWorksheet(arr);
+ }
+ // 相容 Beta 0.2a 舊連結
+ if(location.hash.startsWith("#worksheet=")){
+   try{
+     let raw=location.hash.slice(11);
+     let arr=JSON.parse(decodeURIComponent(escape(atob(raw))));
+     return renderStudentWorksheet(arr);
+   }catch(e){}
+ }
+ return false;
+}
+if(!renderWorksheet())render();
 </script></body></html>
