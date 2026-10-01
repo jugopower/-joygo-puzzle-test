@@ -36,7 +36,7 @@ textarea{width:100%;min-height:70px}.cards{display:grid;grid-template-columns:re
 </style>
 </head>
 <body>
-<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.5a・手順／標記修正版</small></header>
+<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.5a・棋盤標記版</small></header>
 <main>
 <section class="panel">
 <h2>① 建立題目</h2>
@@ -48,7 +48,7 @@ textarea{width:100%;min-height:70px}.cards{display:grid;grid-template-columns:re
 </div>
 <div class="toolbar"><button id="black" class="active">● 擺黑棋</button><button id="white">○ 擺白棋</button><button id="erase">⌫ 刪除棋子</button><button id="answer">🔑 設定答案</button><button id="undo">↶ 復原</button><button id="clear" class="danger">清空棋盤</button></div><div class="toolbar"><span class="hint">棋盤標記：</span><button id="seq">🔢 手順</button><button id="tri">△ 三角</button><button id="circleMark">○ 圈</button><button id="cross">× X</button><button id="markA">A</button><button id="markB">B</button><button id="markC">C</button><button id="markD">D</button><button id="eraseMark">⌫ 清除標記</button><button id="clearMarks">清除全部標記</button></div><div id="answerStatus" class="answerHint">目前：建立題目棋形</div>
 <svg id="board" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet"></svg>
-<div class="hint">操作：選「擺黑棋／擺白棋」後直接點棋盤交叉點。「🔢 手順」會依黑先／白先自動交替落子並顯示 1、2、3…，且支援自動提子。△、○、×、A／B／C／D 可放在棋子或空交叉點。</div>
+<div class="hint">操作：選「擺黑棋／擺白棋」後直接點棋盤交叉點。可另外加入手順、△、○、×、A／B／C／D 標記；標記可放在棋子或空交叉點。</div>
 <div class="field" style="margin-top:10px"><label>題目／提示（可留白）</label><textarea id="note" placeholder="例如：黑先，請找出活棋的要點。"></textarea></div>
 <div class="row"><button id="save" class="primary">💾 儲存題目＋答案</button><button id="new">＋ 新題目</button><button id="clearAnswer">清除答案</button></div>
 </section>
@@ -85,16 +85,16 @@ function playMove(board,mv,n=N){let b=board.map(s=>({...s}));if(b.some(s=>s.x===
 function simulatePosition(base,seq,n=N){let b=base.map(s=>({...s,answerNum:null}));for(let i=0;i<seq.length;i++){let a=seq[i],nb=playMove(b,{x:a.x,y:a.y,c:a.c,answerNum:i+1},n);if(!nb)break;b=nb}return b}
 function answerPosition(){return simulatePosition(stones,answers,N)}
 function activeAnswerLabels(board){return board.filter(s=>s.answerNum!=null).map(s=>({x:s.x,y:s.y,c:s.c,num:s.answerNum}))}
-function draw(){let shown=mode==="A"?answerPosition():stones;buildSvg(svg,N,shown,mode==="A"?activeAnswerLabels(shown):[],markers);$("#answerStatus").textContent=mode==="A"?`🔑 設定答案中：${$("#first").value}・已輸入 ${answers.length} 手（支援自動提子）`:`目前：建立題目棋形${answers.length?`｜已有答案 ${answers.length} 手`:""}`;}
+function draw(){let shown=mode==="ANS"?answerPosition():stones;buildSvg(svg,N,shown,mode==="ANS"?activeAnswerLabels(shown):[],markers);$("#answerStatus").textContent=mode==="ANS"?`🔑 設定答案中：${$("#first").value}・已輸入 ${answers.length} 手（支援自動提子）`:`目前：建立題目棋形${answers.length?`｜已有答案 ${answers.length} 手`:""}`;}
 $("#size").onchange=e=>{N=+e.target.value;stones=[];answers=[];markers=[];history=[];draw()}
 $("#first").onchange=()=>{if(answers.length){if(confirm("更改先手會清除目前答案手順，確定嗎？")){answers=[];history=[]}else{$("#first").value=$("#first").value==="黑先"?"白先":"黑先"}}draw()}
 ;const modeButtons=["black","white","erase","answer","seq","tri","circleMark","cross","markA","markB","markC","markD","eraseMark"];
 function setMode(m,id){mode=m;modeButtons.forEach(x=>$("#"+x).classList.toggle("active",x===id));draw()}
 ["black","white","erase"].forEach(id=>$("#"+id).onclick=()=>setMode(id==="black"?"B":id==="white"?"W":"E",id));
-$("#answer").onclick=()=>setMode("A","answer");
-[["seq","SEQ"],["tri","tri"],["circleMark","circle"],["cross","cross"],["markA","A"],["markB","B"],["markC","C"],["markD","D"],["eraseMark","EM"]].forEach(([id,m])=>$("#"+id).onclick=()=>setMode(m,id));
+$("#answer").onclick=()=>setMode("ANS","answer");
+[["seq","SEQ"],["tri","tri"],["circleMark","circle"],["cross","cross"],["markA","MA"],["markB","MB"],["markC","MC"],["markD","MD"],["eraseMark","EM"]].forEach(([id,m])=>$("#"+id).onclick=()=>setMode(m,id));
 $("#clearMarks").onclick=()=>{if(markers.length&&confirm("確定清除目前棋盤的全部標記？")){history.push(JSON.stringify({stones,answers,markers}));markers=[];draw()}}
-svg.addEventListener("pointerdown",e=>{let r=svg.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*1000,vy=(e.clientY-r.top)/r.height*1000,p=65,step=870/(N-1),x=Math.round((vx-p)/step),y=Math.round((vy-p)/step);if(x<0||y<0||x>=N||y>=N)return;history.push(JSON.stringify({stones,answers,markers}));let k=stones.findIndex(s=>s.x===x&&s.y===y);if(mode==="A"){let start=$("#first").value==="黑先"?"B":"W",c=(answers.length%2===0)?start:(start==="B"?"W":"B"),cur=answerPosition();if(cur.some(s=>s.x===x&&s.y===y)){history.pop();return}let nb=playMove(cur,{x,y,c},N);if(!nb){history.pop();alert("這一手不能下（落在已有棋子或形成自殺棋）。");return}answers.push({x,y,c});}else if(mode==="SEQ"){let seqNo=markers.filter(m=>m.type==="seq").length+1,start=$("#first").value==="黑先"?"B":"W",c=(seqNo%2===1)?start:(start==="B"?"W":"B");if(stones.some(s=>s.x===x&&s.y===y)){history.pop();alert("手順模式請點空的交叉點；系統會自動黑白交替並編號。");return}let nb=playMove(stones,{x,y,c},N);if(!nb){history.pop();alert("這一手不能下（自殺棋）。");return}stones=nb;let live=new Set(stones.map(s=>s.x+","+s.y));markers=markers.filter(m=>m.type!=="seq"||live.has(m.x+","+m.y));markers.push({x,y,type:"seq",label:String(seqNo)});}else if(["tri","circle","cross","A","B","C","D","EM"].includes(mode)){let mi=markers.findIndex(m=>m.x===x&&m.y===y);if(mode==="EM"){if(mi>=0)markers.splice(mi,1);else history.pop()}else{let mark={x,y,type:mode,label:["A","B","C","D"].includes(mode)?mode:undefined};if(mi>=0)markers[mi]=mark;else markers.push(mark)}}else if(mode==="E"){if(k>=0)stones.splice(k,1)}else if(k<0)stones.push({x,y,c:mode});else stones[k].c=mode;draw()})
+svg.addEventListener("pointerdown",e=>{let r=svg.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*1000,vy=(e.clientY-r.top)/r.height*1000,p=65,step=870/(N-1),x=Math.round((vx-p)/step),y=Math.round((vy-p)/step);if(x<0||y<0||x>=N||y>=N)return;history.push(JSON.stringify({stones,answers,markers}));let k=stones.findIndex(s=>s.x===x&&s.y===y);if(mode==="ANS"){let start=$("#first").value==="黑先"?"B":"W",c=(answers.length%2===0)?start:(start==="B"?"W":"B"),cur=answerPosition();if(cur.some(s=>s.x===x&&s.y===y)){history.pop();return}let nb=playMove(cur,{x,y,c},N);if(!nb){history.pop();alert("這一手不能下（落在已有棋子或形成自殺棋）。");return}answers.push({x,y,c});}else if(["SEQ","tri","circle","cross","MA","MB","MC","MD","EM"].includes(mode)){let mi=markers.findIndex(m=>m.x===x&&m.y===y);if(mode==="EM"){if(mi>=0)markers.splice(mi,1);else history.pop()}else{let mark=mode==="SEQ"?{x,y,type:"seq",label:String(markers.filter(m=>m.type==="seq").length+1)}:{x,y,type:({MA:"A",MB:"B",MC:"C",MD:"D"}[mode]||mode),label:({MA:"A",MB:"B",MC:"C",MD:"D"}[mode])};if(mi>=0)markers[mi]=mark;else markers.push(mark)}}else if(mode==="E"){if(k>=0)stones.splice(k,1)}else if(k<0)stones.push({x,y,c:mode});else stones[k].c=mode;draw()})
 $("#undo").onclick=()=>{if(history.length){let h=JSON.parse(history.pop());if(Array.isArray(h)){stones=h}else{stones=h.stones||[];answers=h.answers||[];markers=h.markers||[]}draw()}}
 $("#clear").onclick=()=>{if(!stones.length||confirm("確定清空目前棋盤？")){history.push(JSON.stringify({stones,answers,markers}));stones=[];answers=[];markers=[];draw()}}
 function reset(){stones=[];answers=[];markers=[];history=[];mode="B";$("#note").value="";modeButtons.forEach(x=>$("#"+x).classList.toggle("active",x==="black"));draw()} $("#new").onclick=reset;$("#clearAnswer").onclick=()=>{answers=[];draw()}
