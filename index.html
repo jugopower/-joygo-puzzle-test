@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Joy Go 圍棋題庫 Beta 0.3a</title>
+<title>Joy Go 圍棋題庫 Beta 0.4</title>
 <style>
 :root{--bg:#f4efe6;--panel:#fffdf8;--ink:#29251f;--brown:#765536;--line:#d9cbb8}
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",Arial,sans-serif;background:var(--bg);color:var(--ink)}
@@ -36,7 +36,7 @@ textarea{width:100%;min-height:70px}.cards{display:grid;grid-template-columns:re
 </style>
 </head>
 <body>
-<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.3c・提子引擎修正版</small></header>
+<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.4・題庫檔案版</small></header>
 <main>
 <section class="panel">
 <h2>① 建立題目</h2>
@@ -55,6 +55,7 @@ textarea{width:100%;min-height:70px}.cards{display:grid;grid-template-columns:re
 <section class="panel">
 <h2>② 我的題庫 <span id="count" class="badge">0 題</span> <span id="selectedCount" class="badge">已選 0 題</span></h2>
 <div class="hint">勾選題目後，可測試 A4 4／6／10 題排版。</div>
+<div class="row"><button id="exportBank" class="primary">💾 儲存題庫檔案</button><button id="importBank">📂 開啟題庫檔案</button><input id="importBankFile" type="file" accept="application/json,.json" style="display:none"><span class="hint">可存到 iPad「檔案」／iCloud Drive，需要時再開啟。</span></div>
 <div id="cards" class="cards"></div>
 <div class="printbar"><button onclick="doPrint(4,false)">📄 學生 4 題</button><button onclick="doPrint(6,false)" class="primary">📄 學生 6 題</button><button onclick="doPrint(10,false)">📄 學生 10 題</button><button onclick="doPrint(4,true)">🔑 答案 4 題</button><button onclick="doPrint(6,true)">🔑 答案 6 題</button><button onclick="doPrint(10,true)">🔑 答案 10 題</button><button id="all">全選</button><button id="none">取消全選</button><button id="share">↗ 分享學生測驗卷到 LINE</button><button id="shareAnswer">🔑 分享老師答案卷</button></div>
 </section>
@@ -109,6 +110,27 @@ function openShare(withAnswer=false){
  w.document.write(`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>@page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"PingFang TC",Arial,sans-serif;color:#29251f;margin:0}.actions{padding:12px;background:#f4efe6;text-align:center}.actions button{font:inherit;padding:10px 16px;border:0;border-radius:9px;background:#765536;color:#fff;font-weight:700}.sheet{max-width:194mm;margin:auto}.title{text-align:center;font-size:16pt;font-weight:700}.sub{display:flex;justify-content:space-between;font-size:9pt;margin:2mm 0 3mm}.grid{display:grid;grid-template-columns:1fr 1fr;gap:3mm 5mm}.puzzle{break-inside:avoid}.phead{font-size:9pt;font-weight:700;margin-bottom:1mm}.psvg{width:100%;display:block}.n4 .psvg{height:82mm}.n6 .psvg{height:54mm}.n10{gap:1.5mm 5mm}.n10 .psvg{height:30mm}@media print{.actions{display:none}}</style></head><body><div class="actions"><button onclick="window.print()">🖨️ 產生 PDF／列印</button><div>iPad：進入列印預覽後，用「分享」傳到 LINE。</div></div><div class="sheet"><div class="title">${title}</div><div class="sub"><span>${chosen.length} 題${withAnswer?"答案":"練習"}</span><span>${withAnswer?"老師用":"姓名：____________　日期：____________"}</span></div><div id="grid" class="grid n${n}"></div></div></body></html>`);w.document.close();let grid=w.document.getElementById("grid");chosen.forEach((p,i)=>{let d=w.document.createElement("div");d.className="puzzle";d.innerHTML=`<div class="phead">第 ${i+1} 題　${esc(p.first)}　${esc(p.category)}${withAnswer&&!(p.answer||[]).length?"　（未設答案）":""}</div><svg class="psvg" viewBox="0 0 1000 1000"></svg>`;grid.appendChild(d);if(withAnswer){let pos=simulatePosition(p.stones,p.answer||[],p.size);buildSvg(d.querySelector("svg"),p.size,pos,activeAnswerLabels(pos))}else{buildSvg(d.querySelector("svg"),p.size,p.stones,[])}});
 }
 $("#share").onclick=()=>openShare(false);$("#shareAnswer").onclick=()=>openShare(true);
+
+function savePuzzlesLocal(){try{localStorage.setItem("joygo_puzzles_beta01b",JSON.stringify(puzzles));return true}catch(e){return false}}
+function exportPuzzleBank(){
+ const pack={format:"JoyGoPuzzleBank",version:"0.4",exportedAt:new Date().toISOString(),puzzles:puzzles};
+ const blob=new Blob([JSON.stringify(pack,null,2)],{type:"application/json"});
+ const url=URL.createObjectURL(blob),a=document.createElement("a"),d=new Date(),pad=n=>String(n).padStart(2,"0");
+ a.href=url;a.download=`JoyGo題庫_${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function importPuzzleBank(file){
+ try{
+  const raw=await file.text(),data=JSON.parse(raw),incoming=Array.isArray(data)?data:data&&Array.isArray(data.puzzles)?data.puzzles:null;
+  if(!incoming)throw new Error("格式不符");
+  const valid=incoming.every(p=>p&&[9,13,19].includes(+p.size)&&Array.isArray(p.stones)&&Array.isArray(p.answer||[]));
+  if(!valid)throw new Error("題庫內容不完整");
+  if(puzzles.length&&!confirm(`目前已有 ${puzzles.length} 題。開啟題庫檔案會以檔案中的 ${incoming.length} 題取代目前題庫，確定嗎？`))return;
+  puzzles=JSON.parse(JSON.stringify(incoming));savePuzzlesLocal();render();alert(`題庫已開啟，共 ${puzzles.length} 題。`);
+ }catch(e){alert("無法開啟這個題庫檔案："+e.message)}
+}
+$("#exportBank").onclick=()=>{if(!puzzles.length)return alert("目前沒有題目可儲存。");exportPuzzleBank()};
+$("#importBank").onclick=()=>$("#importBankFile").click();
+$("#importBankFile").onchange=e=>{let f=e.target.files&&e.target.files[0];if(f)importPuzzleBank(f);e.target.value=""};
 window.doPrint=(num,withAnswer=false)=>{let ids=[...document.querySelectorAll(".pick:checked")].map(x=>+x.dataset.id),ch=puzzles.filter(p=>ids.includes(p.id)).slice(0,num);if(!ch.length)return alert("請先勾選題目。");if(withAnswer&&ch.some(p=>!(p.answer||[]).length)&&!confirm("部分題目尚未設定答案，仍要列印嗎？"))return;let a=$("#printArea"),title=withAnswer?"Joy Go 圍棋老師答案卷":"Joy Go 圍棋測驗卷";a.innerHTML=`<div class="sheet-title">${title}</div><div class="sheet-sub"><span>${ch.length} 題${withAnswer?"答案":"練習"}</span><span>${withAnswer?"老師用":"姓名：____________　日期：____________"}</span></div><div class="print-grid n${num}"></div>`;let grid=a.querySelector(".print-grid");ch.forEach((p,i)=>{let d=document.createElement("div");d.className="puzzle";d.innerHTML=`<div class="phead">第 ${i+1} 題　${p.first}　${p.category}${withAnswer&&!(p.answer||[]).length?"　（未設答案）":""}</div><svg class="psvg" viewBox="0 0 1000 1000"></svg>`;grid.appendChild(d);if(withAnswer){let pos=simulatePosition(p.stones,p.answer||[],p.size);buildSvg(d.querySelector("svg"),p.size,pos,activeAnswerLabels(pos))}else{buildSvg(d.querySelector("svg"),p.size,p.stones,[])}});setTimeout(()=>window.print(),100)}
 draw();
 
