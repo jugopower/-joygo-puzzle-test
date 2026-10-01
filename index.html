@@ -36,7 +36,7 @@ textarea{width:100%;min-height:70px}.cards{display:grid;grid-template-columns:re
 </style>
 </head>
 <body>
-<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.5a・棋盤標記版</small></header>
+<header><h1>Joy Go 圍棋題庫</h1><small>Beta 0.5b・標記清晰版</small></header>
 <main>
 <section class="panel">
 <h2>① 建立題目</h2>
@@ -76,7 +76,7 @@ function buildSvg(target,n,ss,ans=[],marks=[]){
  let sg=el("g",{fill:"#2b2119"});stars(n).forEach(([x,y])=>sg.appendChild(el("circle",{cx:p+x*step,cy:p+y*step,r:6})));target.appendChild(sg);
  let cg=el("g");ss.forEach(s=>cg.appendChild(el("circle",{cx:p+s.x*step,cy:p+s.y*step,r:step*.43,fill:s.c==="B"?"#111":"#fff",stroke:"#111","stroke-width":"2"})));target.appendChild(cg);
  if(ans&&ans.length){let ag=el("g");ans.forEach((a,i)=>{let fill=a.c==="B"?"#111":"#fff",txt=a.c==="B"?"#fff":"#111";ag.appendChild(el("circle",{cx:p+a.x*step,cy:p+a.y*step,r:step*.43,fill,stroke:"#b22","stroke-width":"4"}));let t=el("text",{x:p+a.x*step,y:p+a.y*step+step*.13,"text-anchor":"middle","font-size":step*.42,"font-weight":"700",fill:txt});t.textContent=String(a.num??(i+1));ag.appendChild(t)});target.appendChild(ag)}
- if(marks&&marks.length){let mg=el("g");marks.forEach(m=>{let cx=p+m.x*step,cy=p+m.y*step,on=ss.find(s=>s.x===m.x&&s.y===m.y),ink=on&&on.c==="B"?"#fff":"#111",r=step*.25;if(m.type==="tri"){let pts=[[cx,cy-r],[cx-r*.9,cy+r*.7],[cx+r*.9,cy+r*.7]].map(q=>q.join(",")).join(" ");mg.appendChild(el("polygon",{points:pts,fill:"none",stroke:ink,"stroke-width":"5","stroke-linejoin":"round"}))}else if(m.type==="circle"){mg.appendChild(el("circle",{cx,cy,r:r*.9,fill:"none",stroke:ink,"stroke-width":"5"}))}else if(m.type==="cross"){mg.appendChild(el("line",{x1:cx-r,y1:cy-r,x2:cx+r,y2:cy+r,stroke:ink,"stroke-width":"5","stroke-linecap":"round"}));mg.appendChild(el("line",{x1:cx+r,y1:cy-r,x2:cx-r,y2:cy+r,stroke:ink,"stroke-width":"5","stroke-linecap":"round"}))}else{let t=el("text",{x:cx,y:cy+step*.13,"text-anchor":"middle","font-size":step*.42,"font-weight":"800",fill:ink,stroke:on?"none":"#d9aa62","stroke-width":"1"});t.textContent=m.label||m.type;mg.appendChild(t)}});target.appendChild(mg)}
+ if(marks&&marks.length){let mg=el("g");marks.forEach(m=>{let cx=p+m.x*step,cy=p+m.y*step,on=ss.find(s=>s.x===m.x&&s.y===m.y),ink=on&&on.c==="B"?"#fff":"#111",r=step*.25;if(m.type==="tri"){let pts=[[cx,cy-r],[cx-r*.9,cy+r*.7],[cx+r*.9,cy+r*.7]].map(q=>q.join(",")).join(" ");mg.appendChild(el("polygon",{points:pts,fill:"none",stroke:ink,"stroke-width":"5","stroke-linejoin":"round"}))}else if(m.type==="circle"){mg.appendChild(el("circle",{cx,cy,r:r*.9,fill:"none",stroke:ink,"stroke-width":"5"}))}else if(m.type==="cross"){mg.appendChild(el("line",{x1:cx-r,y1:cy-r,x2:cx+r,y2:cy+r,stroke:ink,"stroke-width":"5","stroke-linecap":"round"}));mg.appendChild(el("line",{x1:cx+r,y1:cy-r,x2:cx-r,y2:cy+r,stroke:ink,"stroke-width":"5","stroke-linecap":"round"}))}else{let isLetter=["A","B","C","D"].includes(m.label||m.type), fs=isLetter?step*.68:step*.50, sw=isLetter?Math.max(2,step*.055):1; let t=el("text",{x:cx,y:cy+fs*.34,"text-anchor":"middle","font-size":fs,"font-family":"Arial, sans-serif","font-weight":"900",fill:ink,stroke:on?(on.c==="B"?"#111":"#fff"):"#d9aa62","stroke-width":sw,"paint-order":"stroke fill","stroke-linejoin":"round"});t.textContent=m.label||m.type;mg.appendChild(t)}});target.appendChild(mg)}
 }
 function key(x,y){return x+","+y}
 function neighborsFor(n,x,y){return [[x-1,y],[x+1,y],[x,y-1],[x,y+1]].filter(([a,b])=>a>=0&&b>=0&&a<n&&b<n)}
